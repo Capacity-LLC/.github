@@ -73,17 +73,34 @@ def check(body: str, author: str, author_type: str, labels: list[str],
     return True, "Documentation section present"
 
 
+def current_pr(repo: str, number: str, token: str) -> dict:
+    """The PR as it is now. A ruleset-required workflow runs only on opened/synchronize/reopened,
+    and a re-run replays the original event, so the event payload can hold a stale description."""
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{repo}/pulls/{number}",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.load(resp)
+
+
 def main() -> int:
-    labels = [l.strip() for l in os.environ.get("PR_LABELS", "").split(",") if l.strip()]
     env = os.environ
-    ok, message = check(
-        env.get("PR_BODY", ""), env.get("PR_AUTHOR", ""), env.get("PR_AUTHOR_TYPE", ""), labels,
-        lambda: last_labeler(env["GITHUB_REPOSITORY"], env["PR_NUMBER"], env["GITHUB_TOKEN"],
-                             EXEMPT_LABEL))
+    repo, number, token = env.get("GITHUB_REPOSITORY"), env.get("PR_NUMBER"), env.get("GITHUB_TOKEN")
+    if repo and number and token:
+        pr = current_pr(repo, number, token)
+        body, author = pr.get("body") or "", pr["user"]["login"]
+        author_type = pr["user"].get("type", "")
+        labels = [l["name"] for l in pr.get("labels", [])]
+    else:  # local runs without a token: use the event values
+        body, author, author_type = env.get("PR_BODY", ""), env.get("PR_AUTHOR", ""), env.get("PR_AUTHOR_TYPE", "")
+        labels = [l.strip() for l in env.get("PR_LABELS", "").split(",") if l.strip()]
+    ok, message = check(body, author, author_type, labels,
+                        lambda: last_labeler(repo, number, token, EXEMPT_LABEL))
     if ok:
         print(f"OK: {message}")
         return 0
-    print(f"::error title=Documentation section::{message}")
+    print(f"::error title=Documentation section::{message} After editing the description, "
+          "re-run this check (Re-run jobs) or push a commit: edits alone do not start it.")
     print("Rule: https://github.com/Capacity-LLC/.github/blob/main/CONTRIBUTING.md")
     return 1
 

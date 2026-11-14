@@ -30,7 +30,10 @@ linked docs PR), or says `None:` followed by why no document describes this chan
 
 The **docs section** check runs on every PR in every repository (organisation ruleset "docs section
 required") and fails when the section is missing, empty, or a bare "None". Fix it by editing the PR
-description; the check re-runs on the edit.
+description, then re-run the failed check (**Re-run jobs** on the check) or push a commit. Editing
+the description or adding a label does not start the check by itself: GitHub runs an
+organisation-required workflow only when a PR is opened, reopened or gets new commits. The check
+reads the PR's current description and labels, so a re-run sees your edit.
 
 - PRs opened by bots (the release bot, Dependabot) are skipped.
 - The `docs-exempt` label skips the check when the rule genuinely does not fit. Like the other

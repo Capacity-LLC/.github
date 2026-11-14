@@ -4,6 +4,9 @@
 # docs-exempt label counts only when rbhocap adds it (like the other exemption labels).
 name: docs section
 
+# As a ruleset-required workflow it runs only on opened, synchronize and reopened, whatever the types
+# list says; edits and labels need a re-run. The checker reads the PR's current body and labels from
+# the API, so a re-run (which replays the original event) still sees the latest description.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
