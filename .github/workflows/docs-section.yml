@@ -1,0 +1,33 @@
+# Required on every Capacity-LLC repository by the org ruleset "docs section required".
+# Fails a pull request whose "## Documentation" section is missing, empty or a bare "None".
+# Rule: CONTRIBUTING.md in this repository. Bots (release bot, Dependabot) are skipped, and a
+# reviewer may apply the docs-exempt label deliberately.
+name: docs section
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  docs-section:
+    name: docs section
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Runs in the calling repository, so fetch the checker from this one (public, no token).
+      - uses: actions/checkout@v4
+        with:
+          repository: Capacity-LLC/.github
+          ref: main
+          path: .org-github
+          persist-credentials: false
+
+      - name: Check the Documentation section
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: python3 -I .org-github/scripts/check_docs_section.py
