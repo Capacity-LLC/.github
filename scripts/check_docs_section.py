@@ -5,21 +5,52 @@ Rule (every Capacity-LLC repository, people and Claude Code alike): every change
 documents that describe it - ITSD docs, partner docs, GitOps docs, READMEs, CLAUDE.md - in the same
 PR or in a linked PR that merges with it. The PR says which, or "None:" and why.
 
-Reads PR_BODY, PR_AUTHOR, PR_AUTHOR_TYPE and PR_LABELS (comma-separated) from the environment.
+Reads PR_BODY, PR_AUTHOR, PR_AUTHOR_TYPE, PR_LABELS (comma-separated), PR_NUMBER,
+GITHUB_REPOSITORY and GITHUB_TOKEN from the environment.
+
+The docs-exempt label counts only when one of EXEMPT_APPROVERS added it, the same rule as the
+other exemption labels in Capacity-LLC repositories, so an author cannot exempt their own PR.
 """
+import json
 import os
 import re
 import sys
+import urllib.request
+from typing import Callable, Optional
 
 EXEMPT_LABEL = "docs-exempt"
+EXEMPT_APPROVERS = {"rbhocap"}
 MIN_REASON = 15  # characters of explanation after "None"
 
 
-def check(body: str, author: str, author_type: str, labels: list[str]) -> tuple[bool, str]:
+def last_labeler(repo: str, number: str, token: str, label: str) -> Optional[str]:
+    """Login of whoever most recently added `label` to the PR, from its issue events."""
+    actor, page = None, 1
+    while True:
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{repo}/issues/{number}/events?per_page=100&page={page}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            events = json.load(resp)
+        for e in events:
+            if e.get("event") == "labeled" and (e.get("label") or {}).get("name") == label:
+                actor = (e.get("actor") or {}).get("login")
+        if len(events) < 100:
+            return actor
+        page += 1
+
+
+def check(body: str, author: str, author_type: str, labels: list[str],
+          labeler: Callable[[], Optional[str]] = lambda: None) -> tuple[bool, str]:
     if author_type == "Bot" or author.endswith("[bot]"):
         return True, f"skipped: opened by a bot ({author})"
     if EXEMPT_LABEL in labels:
-        return True, f"skipped: a reviewer applied the {EXEMPT_LABEL} label"
+        who = labeler()
+        if who in EXEMPT_APPROVERS:
+            return True, f"skipped: {who} applied the {EXEMPT_LABEL} label"
+        return False, (f"the {EXEMPT_LABEL} label counts only when "
+                       f"{' or '.join(sorted(EXEMPT_APPROVERS))} adds it (added by {who or 'unknown'}). "
+                       f"Fill in the Documentation section instead, or ask for the exemption.")
 
     text = (body or "").replace("\r\n", "\n")
     text = re.sub(r"<!--.*?-->", "", text, flags=re.S)  # template hints do not count
@@ -44,8 +75,11 @@ def check(body: str, author: str, author_type: str, labels: list[str]) -> tuple[
 
 def main() -> int:
     labels = [l.strip() for l in os.environ.get("PR_LABELS", "").split(",") if l.strip()]
-    ok, message = check(os.environ.get("PR_BODY", ""), os.environ.get("PR_AUTHOR", ""),
-                        os.environ.get("PR_AUTHOR_TYPE", ""), labels)
+    env = os.environ
+    ok, message = check(
+        env.get("PR_BODY", ""), env.get("PR_AUTHOR", ""), env.get("PR_AUTHOR_TYPE", ""), labels,
+        lambda: last_labeler(env["GITHUB_REPOSITORY"], env["PR_NUMBER"], env["GITHUB_TOKEN"],
+                             EXEMPT_LABEL))
     if ok:
         print(f"OK: {message}")
         return 0

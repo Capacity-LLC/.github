@@ -33,5 +33,5 @@ required") and fails when the section is missing, empty, or a bare "None". Fix i
 description; the check re-runs on the edit.
 
 - PRs opened by bots (the release bot, Dependabot) are skipped.
-- A reviewer may apply the `docs-exempt` label when the rule genuinely does not fit. It is a
-  deliberate decision by someone other than the author, like the other exemption labels.
+- The `docs-exempt` label skips the check when the rule genuinely does not fit. Like the other
+  exemption labels, it counts only when `rbhocap` adds it; added by anyone else, the check fails.

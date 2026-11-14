@@ -1,14 +1,16 @@
 # Required on every Capacity-LLC repository by the org ruleset "docs section required".
 # Fails a pull request whose "## Documentation" section is missing, empty or a bare "None".
 # Rule: CONTRIBUTING.md in this repository. Bots (release bot, Dependabot) are skipped, and a
-# reviewer may apply the docs-exempt label deliberately.
+# docs-exempt label counts only when rbhocap adds it (like the other exemption labels).
 name: docs section
 
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
-permissions: {}
+permissions:
+  issues: read          # who added the docs-exempt label
+  pull-requests: read
 
 jobs:
   docs-section:
@@ -30,4 +32,6 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
           PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 -I .org-github/scripts/check_docs_section.py

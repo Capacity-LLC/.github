@@ -16,12 +16,15 @@ cases = [
     ("h3 heading", "### Documentation\n- README.md\n", "dev", "User", [], True),
     ("bot skipped", "release notes only", "capacity-release-bot[bot]", "Bot", [], True),
     ("dependabot skipped", "", "dependabot[bot]", "Bot", [], True),
-    ("label exempt", "no section", "dev", "User", ["bug", "docs-exempt"], True),
+    ("label exempt by approver", "no section", "dev", "User", ["bug", "docs-exempt"], True, "rbhocap"),
+    ("label added by author", "no section", "dev", "User", ["docs-exempt"], False, "dev"),
+    ("label adder unknown", "no section", "dev", "User", ["docs-exempt"], False, None),
     ("Manual steps None does not satisfy", "## Manual deployment steps\nNone\n", "dev", "User", [], False),
 ]
 bad = 0
-for name, body, author, typ, labels, want in cases:
-    got, msg = check(body, author, typ, labels)
+for name, body, author, typ, labels, want, *adder in cases:
+    who = adder[0] if adder else None
+    got, msg = check(body, author, typ, labels, lambda: who)
     flag = "PASS" if got == want else "FAIL"
     bad += got != want
     print(f"{flag}  {name:40} -> {got} ({msg[:70]})")
