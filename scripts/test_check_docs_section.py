@@ -19,14 +19,25 @@ cases = [
     ("label exempt by approver", "no section", "dev", "User", ["bug", "docs-exempt"], True, "rbhocap"),
     ("label added by author", "no section", "dev", "User", ["docs-exempt"], False, "dev"),
     ("label adder unknown", "no section", "dev", "User", ["docs-exempt"], False, None),
+    ("label by code owner", "no section", "dev", "User", ["docs-exempt"], True, "owner1"),
+    ("label by code owner, case differs", "no section", "dev", "User", ["docs-exempt"], True, "Owner1"),
+    ("code owner labels own PR", "no section", "owner1", "User", ["docs-exempt"], False, "owner1"),
+    ("approver labels own PR", "no section", "rbhocap", "User", ["docs-exempt"], True, "rbhocap"),
+    ("label by non-owner", "no section", "dev", "User", ["docs-exempt"], False, "someone"),
     ("Manual steps None does not satisfy", "## Manual deployment steps\nNone\n", "dev", "User", [], False),
 ]
 bad = 0
 for name, body, author, typ, labels, want, *adder in cases:
     who = adder[0] if adder else None
-    got, msg = check(body, author, typ, labels, lambda: who)
+    got, msg = check(body, author, typ, labels, lambda: who, lambda: {"owner1", "owner2"})
     flag = "PASS" if got == want else "FAIL"
     bad += got != want
     print(f"{flag}  {name:40} -> {got} ({msg[:70]})")
+from check_docs_section import parse_codeowners
+co = parse_codeowners("\n".join(["# c", "* @Rbhocap @a-b  # x", "/src/ @Capacity-LLC/devs @c dev@x.com", ""]))
+if co != {"rbhocap", "a-b", "c"}:
+    print("FAIL  parse_codeowners", co); bad += 1
+else:
+    print("PASS  parse_codeowners")
 print("all good" if not bad else f"{bad} wrong")
 sys.exit(bad)

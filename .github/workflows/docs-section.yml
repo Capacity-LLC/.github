@@ -1,7 +1,8 @@
 # Required on every Capacity-LLC repository by the org ruleset "docs section required".
 # Fails a pull request whose "## Documentation" section is missing, empty or a bare "None".
 # Rule: CONTRIBUTING.md in this repository. Bots (release bot, Dependabot) are skipped, and a
-# docs-exempt label counts only when rbhocap adds it (like the other exemption labels).
+# docs-exempt label ("no docs needed") counts when a code owner of the repository adds it, but not on
+# their own PR (rbhocap may). Organisation admins can merge past a failure (ruleset bypass).
 name: docs section
 
 # As a ruleset-required workflow it runs only on opened, synchronize and reopened, whatever the types
@@ -12,6 +13,7 @@ on:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 permissions:
+  contents: read        # the repository's CODEOWNERS (who may add docs-exempt)
   issues: read          # who added the docs-exempt label
   pull-requests: read
 

@@ -36,5 +36,10 @@ organisation-required workflow only when a PR is opened, reopened or gets new co
 reads the PR's current description and labels, so a re-run sees your edit.
 
 - PRs opened by bots (the release bot, Dependabot) are skipped.
-- The `docs-exempt` label skips the check when the rule genuinely does not fit. Like the other
-  exemption labels, it counts only when `rbhocap` adds it; added by anyone else, the check fails.
+- **No docs needed:** a code owner (anyone named in the repository's `CODEOWNERS`) adds the
+  `docs-exempt` label, then re-runs the check. It does not count when the code owner is the PR's
+  author (rbhocap excepted), or when anyone else adds it. Repositories without a `CODEOWNERS` file:
+  only `rbhocap`. Writing `None:` and the reason in the section works too and needs nobody else.
+- **Merging past the check:** organisation admins can still merge a PR whose check fails (the
+  ruleset lets them bypass it; GitHub shows "Merge without waiting for requirements"). Use it when
+  the check is in the way, not as the usual route.
